@@ -19,12 +19,11 @@ network:
   vnet_address_space:
     - "10.100.0.0/16"
   custom_dns_servers:
-    - "10.0.0.53"
-    - "10.0.0.54"
+    - "10.0.0.1"
   workload_subnet_prefixes:
     - "10.100.1.0/24"
   gateway_subnet_prefixes:
-    - "10.100.255.0/27"
+    - "10.100.254.0/27"
 
 
 # Public IP configuration
