@@ -1,0 +1,25 @@
+#cloud-config
+package_update: true
+packages: [curl, jq, ca-certificates, gnupg, lsb-release]
+
+runcmd:
+  # format & mount data disk (lun0) at /var/lib/ollama
+  - DISK=/dev/disk/azure/scsi1/lun0
+  - mkdir -p /var/lib/ollama
+  - lsblk $DISK || true
+  - mkfs.ext4 -F $DISK
+  - UUID=$(blkid -s UUID -o value $DISK)
+  - echo "UUID=${UUID} /var/lib/ollama ext4 defaults,nofail 0 2" >> /etc/fstab
+  - mount -a
+
+  # install Ollama
+  - curl -fsSL https://ollama.com/install.sh | sh
+
+  # ensure service picks up env from file
+  - mkdir -p /etc/systemd/system/ollama.service.d
+  - printf "[Service]\nEnvironmentFile=/etc/default/ollama\n" > /etc/systemd/system/ollama.service.d/override.conf
+
+  # bind to all interfaces + put models on the data disk
+  - printf "OLLAMA_HOST=0.0.0.0:11434\nOLLAMA_MODELS=/var/lib/ollama\n" > /etc/default/ollama
+  - systemctl daemon-reload
+  - systemctl enable --now ollama
