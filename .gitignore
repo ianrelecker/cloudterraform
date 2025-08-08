@@ -52,3 +52,25 @@ terraform.rc
 *.key
 id_rsa*
 *.pub
+
+# Azure CLI and Terraform specific
+.azure/
+az.json
+
+# Environment files that might contain secrets
+.env
+.env.*
+
+# IDE and editor files
+.vscode/
+.idea/
+*.code-workspace
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+
+# Python files (if using Python scripts)
+__pycache__/
+*.pyc
+*.pyo
