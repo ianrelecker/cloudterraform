@@ -1,0 +1,51 @@
+# VPN Gateway Configuration
+# This file contains configuration values that can override the defaults in networking.tf
+
+# Basic configuration
+resource_group_name: "my-company-rg"
+location: "West US 3"
+environment: "prod"
+project_name: "corp-network"
+
+# On-premises network configuration
+on_premises:
+  gateway_fqdn: "vpn.company.com"
+  address_spaces:
+    - "10.0.0.0/16"
+    - "192.168.0.0/24"
+
+# Network configuration
+network:
+  vnet_address_space:
+    - "10.100.0.0/16"
+  custom_dns_servers:
+    - "10.0.0.53"
+    - "10.0.0.54"
+  workload_subnet_prefixes:
+    - "10.100.1.0/24"
+  gateway_subnet_prefixes:
+    - "10.100.255.0/27"
+
+
+# Public IP configuration
+public_ip:
+  sku: "Standard"
+  idle_timeout: 4
+
+# VPN Gateway configuration
+vpn_gateway:
+  type: "Vpn"
+  vpn_type: "RouteBased"
+  sku: "VpnGw1"
+  generation: "Generation1"
+  enable_bgp: false
+  bgp:
+    autonomous_system_number: 65515
+    peer_weight: 0
+
+# Connection configuration
+connection:
+  protocol: "IKEv2"
+  routing_weight: 0
+  dpd_timeout_seconds: 45
+  # shared_key: "your-secure-shared-key-here"  # Uncomment and set via variable or environment

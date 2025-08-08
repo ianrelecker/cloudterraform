@@ -3,6 +3,13 @@ terraform {
   required_providers {
     azurerm = { source = "hashicorp/azurerm", version = "~> 3.113" }
   }
+  
+  backend "azurerm" {
+    resource_group_name  = "terraform-state-rg"
+    storage_account_name = "tfstatecloudterraform"
+    container_name       = "tfstate"
+    key                  = "ollama-vm.terraform.tfstate"
+  }
 }
 
 provider "azurerm" {
