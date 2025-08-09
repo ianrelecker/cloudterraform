@@ -65,6 +65,7 @@ az.json
 .vscode/
 .idea/
 *.code-workspace
+.claude/
 
 # OS generated files
 Thumbs.db
