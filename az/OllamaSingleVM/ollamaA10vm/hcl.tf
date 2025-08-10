@@ -29,7 +29,7 @@ variable "github_username"   {
 variable "vnet_cidr"         { default = "10.20.0.0/16" }
 variable "subnet_cidr"       { default = "10.20.1.0/24" }
 variable "allowed_ssh_cidr"  { default = "0.0.0.0/0" } # tighten to your IP
-variable "create_public_ip"  { default = false }
+variable "create_public_ip"  { default = true }
 variable "model_disk_size_gb"{ default = 512 }
 variable "disk_iops"         { default = 3000 } # Premium SSD v2 perf knobs
 variable "disk_mbps"         { default = 125 }
@@ -42,11 +42,11 @@ data "http" "github_ssh_keys" {
   }
 }
 
-# Parse and filter SSH keys to get only RSA keys
+# Parse and filter SSH keys to get all supported key types
 locals {
   all_keys = split("\n", trimspace(data.http.github_ssh_keys.response_body))
-  rsa_keys = [for key in local.all_keys : key if startswith(key, "ssh-rsa")]
-  selected_rsa_key = length(local.rsa_keys) > 0 ? local.rsa_keys[0] : ""
+  valid_keys = [for key in local.all_keys : key if length(trimspace(key)) > 0 && can(regex("^ssh-rsa", key))]
+  selected_key = length(local.valid_keys) > 0 ? local.valid_keys[0] : ""
 }
 
 # ----------------- Network -----------------
@@ -85,6 +85,19 @@ resource "azurerm_network_security_group" "nsg" {
     source_address_prefixes    = [var.allowed_ssh_cidr]
     destination_address_prefix = "*"
   }
+
+  # Keep Ollama reachable only inside the VNet (ingress is private)
+  security_rule {
+    name                       = "ollama-vnet-in"
+    priority                   = 120
+    direction                  = "Inbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "11434"
+    source_address_prefixes    = [var.vnet_cidr]
+    destination_address_prefix = "*"
+  }
 }
 
 resource "azurerm_subnet_network_security_group_association" "subnet_nsg" {
@@ -119,11 +132,8 @@ resource "azurerm_managed_disk" "models" {
   name                 = "${var.prefix}-models-disk"
   location             = azurerm_resource_group.rg.location
   resource_group_name  = azurerm_resource_group.rg.name
-  storage_account_type = "PremiumV2_LRS"
+  storage_account_type = "Premium_LRS"
   disk_size_gb         = var.model_disk_size_gb
-  disk_iops_read_write = var.disk_iops
-  disk_mbps_read_write = var.disk_mbps
-  zone                 = var.zone
   create_option        = "Empty"
 }
 
@@ -132,7 +142,6 @@ resource "azurerm_linux_virtual_machine" "vm" {
   name                = "${var.prefix}-vm"
   resource_group_name = azurerm_resource_group.rg.name
   location            = azurerm_resource_group.rg.location
-  zone                = var.zone
   size                = var.vm_size
   admin_username      = var.admin_username
   network_interface_ids = [azurerm_network_interface.nic.id]
@@ -151,12 +160,11 @@ resource "azurerm_linux_virtual_machine" "vm" {
     storage_account_type = "StandardSSD_LRS"
   }
 
-  # Note: security_profile not supported in azurerm_linux_virtual_machine
-  # For GPU driver compatibility, use disable_password_authentication = false if needed
+  disable_password_authentication = true
 
   admin_ssh_key {
     username   = var.admin_username
-    public_key = local.selected_rsa_key
+    public_key = local.selected_key
   }
 
   custom_data = base64encode(file("${path.module}/cloud-init.yaml"))

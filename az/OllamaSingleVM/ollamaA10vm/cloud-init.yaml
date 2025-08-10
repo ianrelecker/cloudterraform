@@ -1,25 +1,67 @@
 #cloud-config
 package_update: true
-packages: [curl, jq, ca-certificates, gnupg, lsb-release]
+package_upgrade: true
+
+packages:
+  - curl
+  - wget
+  - unzip
+  - htop
+
+# Mount the data disk for Ollama models
+disk_setup:
+  /dev/sdc:
+    table_type: gpt
+    layout: true
+
+fs_setup:
+  - label: ollama-models
+    filesystem: ext4
+    device: /dev/sdc1
+
+mounts:
+  - ["/dev/disk/by-label/ollama-models", "/var/lib/ollama", "ext4", "defaults", "0", "2"]
 
 runcmd:
-  # format & mount data disk (lun0) at /var/lib/ollama
-  - DISK=/dev/disk/azure/scsi1/lun0
-  - mkdir -p /var/lib/ollama
-  - lsblk $DISK || true
-  - mkfs.ext4 -F $DISK
-  - UUID=$(blkid -s UUID -o value $DISK)
-  - echo "UUID=${UUID} /var/lib/ollama ext4 defaults,nofail 0 2" >> /etc/fstab
-  - mount -a
-
-  # install Ollama
+  # Create ollama user and group
+  - useradd -r -s /bin/false -d /opt/ollama ollama
+  
+  # Create directories and set permissions
+  - mkdir -p /opt/ollama /var/lib/ollama
+  - chown ollama:ollama /opt/ollama /var/lib/ollama
+  
+  # Install Ollama
   - curl -fsSL https://ollama.com/install.sh | sh
-
-  # ensure service picks up env from file
+  
+  # Create systemd service override to use data disk
   - mkdir -p /etc/systemd/system/ollama.service.d
-  - printf "[Service]\nEnvironmentFile=/etc/default/ollama\n" > /etc/systemd/system/ollama.service.d/override.conf
-
-  # bind to all interfaces + put models on the data disk
-  - printf "OLLAMA_HOST=0.0.0.0:11434\nOLLAMA_MODELS=/var/lib/ollama\n" > /etc/default/ollama
+  - |
+    cat > /etc/systemd/system/ollama.service.d/override.conf << 'EOF'
+    [Service]
+    Environment="OLLAMA_MODELS=/var/lib/ollama"
+    Environment="OLLAMA_HOST=0.0.0.0:11434"
+    EOF
+  
+  # Enable and start Ollama service
   - systemctl daemon-reload
-  - systemctl enable --now ollama
+  - systemctl enable ollama
+  - systemctl start ollama
+  
+  # Wait for service to be ready
+  - sleep 10
+  
+  # Download a lightweight model for testing
+  - sudo -u ollama OLLAMA_MODELS=/var/lib/ollama /usr/local/bin/ollama pull llama3.2:1b
+
+write_files:
+  - path: /etc/logrotate.d/ollama
+    content: |
+      /var/log/ollama/*.log {
+          daily
+          rotate 7
+          compress
+          delaycompress
+          missingok
+          notifempty
+          create 644 ollama ollama
+      }

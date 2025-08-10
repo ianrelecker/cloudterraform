@@ -29,7 +29,7 @@ variable "github_username"   {
 variable "vnet_cidr"         { default = "10.50.0.0/16" }
 variable "subnet_cidr"       { default = "10.50.1.0/24" }
 variable "allowed_ssh_cidr"  { default = "0.0.0.0/0" } # tighten to your IP
-variable "create_public_ip"  { default = false }
+variable "create_public_ip"  { default = true }
 variable "model_disk_size_gb"{ default = 256 }
 variable "disk_iops"         { default = 3000 } # Premium SSD v2 perf knobs
 variable "disk_mbps"         { default = 125 }
@@ -42,11 +42,11 @@ data "http" "github_ssh_keys" {
   }
 }
 
-# Parse and filter SSH keys to get only RSA keys
+# Parse and filter SSH keys to get all supported key types
 locals {
   all_keys = split("\n", trimspace(data.http.github_ssh_keys.response_body))
-  rsa_keys = [for key in local.all_keys : key if startswith(key, "ssh-rsa")]
-  selected_rsa_key = length(local.rsa_keys) > 0 ? local.rsa_keys[0] : ""
+  valid_keys = [for key in local.all_keys : key if length(trimspace(key)) > 0 && can(regex("^ssh-rsa", key))]
+  selected_key = length(local.valid_keys) > 0 ? local.valid_keys[0] : ""
 }
 
 # ----------------- Network -----------------
@@ -164,7 +164,7 @@ resource "azurerm_linux_virtual_machine" "vm" {
 
   admin_ssh_key {
     username   = var.admin_username
-    public_key = local.selected_rsa_key
+    public_key = local.selected_key
   }
 
   custom_data = base64encode(file("${path.module}/cloud-init.yaml"))
@@ -177,18 +177,6 @@ resource "azurerm_virtual_machine_data_disk_attachment" "attach" {
   caching            = "ReadOnly"
 }
 
-# NVIDIA GPU driver (Linux) – installs T4/CUDA drivers
-resource "azurerm_virtual_machine_extension" "nvidia" {
-  name                 = "NvidiaGpuDriverLinux"
-  virtual_machine_id   = azurerm_linux_virtual_machine.vm.id
-  publisher            = "Microsoft.HpcCompute"
-  type                 = "NvidiaGpuDriverLinux"
-  type_handler_version = "1.11"
-  auto_upgrade_minor_version = true
-
-  # Optional: pin a specific driver version if needed
-  # settings = jsonencode({ driverVersion = "535.161" })
-}
 
 # --------------- Output ---------------
 output "private_ip" { value = azurerm_network_interface.nic.private_ip_address }

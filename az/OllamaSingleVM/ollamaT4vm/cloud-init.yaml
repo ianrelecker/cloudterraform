@@ -27,8 +27,8 @@ runcmd:
   - useradd -r -s /bin/false -d /opt/ollama ollama
   
   # Create directories and set permissions
-  - mkdir -p /opt/ollama-models
-  - chown ollama:ollama /opt/ollama-models
+  - mkdir -p /opt/ollama /opt/ollama-models
+  - chown ollama:ollama /opt/ollama /opt/ollama-models
   
   # Install Ollama
   - curl -fsSL https://ollama.com/install.sh | sh
