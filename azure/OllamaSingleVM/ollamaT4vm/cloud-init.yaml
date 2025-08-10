@@ -7,6 +7,10 @@ packages:
   - wget
   - unzip
   - htop
+  - build-essential
+  - gcc-12
+  - g++-12
+  - ubuntu-drivers-common
 
 # Mount the data disk for Ollama models
 disk_setup:
@@ -20,15 +24,18 @@ fs_setup:
     device: /dev/sdc1
 
 mounts:
-  - ["/dev/disk/by-label/ollama-models", "/var/lib/ollama", "ext4", "defaults", "0", "2"]
+  - ["/dev/disk/by-label/ollama-models", "/opt/ollama-models", "ext4", "defaults", "0", "2"]
 
 runcmd:
+  # Install NVIDIA drivers using ubuntu-drivers
+  - ubuntu-drivers autoinstall
+  
   # Create ollama user and group
   - useradd -r -s /bin/false -d /opt/ollama ollama
   
   # Create directories and set permissions
-  - mkdir -p /opt/ollama /var/lib/ollama
-  - chown ollama:ollama /opt/ollama /var/lib/ollama
+  - mkdir -p /opt/ollama /opt/ollama-models
+  - chown ollama:ollama /opt/ollama /opt/ollama-models
   
   # Install Ollama
   - curl -fsSL https://ollama.com/install.sh | sh
@@ -38,20 +45,23 @@ runcmd:
   - |
     cat > /etc/systemd/system/ollama.service.d/override.conf << 'EOF'
     [Service]
-    Environment="OLLAMA_MODELS=/var/lib/ollama"
+    Environment="OLLAMA_MODELS=/opt/ollama-models"
     Environment="OLLAMA_HOST=0.0.0.0:11434"
+    Environment="CUDA_VISIBLE_DEVICES=0"
+    Environment="OLLAMA_NUM_GPU=1"
     EOF
   
   # Enable and start Ollama service
   - systemctl daemon-reload
-  - systemctl enable ollama
-  - systemctl start ollama
+  - systemctl enable --now ollama
   
   # Wait for service to be ready
   - sleep 10
   
-  # Download a lightweight model for testing
-  - sudo -u ollama OLLAMA_MODELS=/var/lib/ollama /usr/local/bin/ollama pull llama3.2:1b
+  # Start Ollama serve in background and download a lightweight model for testing
+  - sudo -u ollama OLLAMA_MODELS=/opt/ollama-models nohup /usr/local/bin/ollama serve &
+  - sleep 5
+  - sudo -u ollama OLLAMA_MODELS=/opt/ollama-models /usr/local/bin/ollama pull gpt-oss
 
 write_files:
   - path: /etc/logrotate.d/ollama

@@ -8,7 +8,7 @@ terraform {
     resource_group_name  = "terraform-state-rg"
     storage_account_name = "tfstatecloudterraform"
     container_name       = "tfstate"
-    key                  = "ollama-vm.terraform.tfstate"
+    key                  = "linux-a1v2-vm.terraform.tfstate"
   }
 }
 
@@ -17,22 +17,18 @@ provider "azurerm" {
 }
 
 # -------- Vars (override via -var or tfvars) ----------
-variable "prefix"            { default = "ollama" }
-variable "location"          { default = "westus3" } # change to your region
-variable "zone"              { default = "1" }
-variable "vm_size"           { default = "Standard_NV36ads_A10_v5" } # full A10
+variable "prefix"            { default = "linux-a1v2" }
+variable "location"          { default = "westus" }
+variable "vm_size"           { default = "Standard_A1_v2" }
 variable "admin_username"    { default = "azureuser" }
 variable "github_username"   { 
   description = "GitHub username to fetch SSH public keys from"
   type        = string
 }
-variable "vnet_cidr"         { default = "10.20.0.0/16" }
-variable "subnet_cidr"       { default = "10.20.1.0/24" }
-variable "allowed_ssh_cidr"  { default = "0.0.0.0/0" } # tighten to your IP
+variable "vnet_cidr"         { default = "10.60.0.0/16" }
+variable "subnet_cidr"       { default = "10.60.1.0/24" }
+variable "allowed_ssh_cidr"  { default = "0.0.0.0/0" }
 variable "create_public_ip"  { default = true }
-variable "model_disk_size_gb"{ default = 512 }
-variable "disk_iops"         { default = 3000 } # Premium SSD v2 perf knobs
-variable "disk_mbps"         { default = 125 }
 
 # ----------------- Data Sources -----------------
 data "http" "github_ssh_keys" {
@@ -42,7 +38,6 @@ data "http" "github_ssh_keys" {
   }
 }
 
-# Parse and filter SSH keys to get all supported key types
 locals {
   all_keys = split("\n", trimspace(data.http.github_ssh_keys.response_body))
   valid_keys = [for key in local.all_keys : key if length(trimspace(key)) > 0 && can(regex("^ssh-rsa", key))]
@@ -85,19 +80,6 @@ resource "azurerm_network_security_group" "nsg" {
     source_address_prefixes    = [var.allowed_ssh_cidr]
     destination_address_prefix = "*"
   }
-
-  # Keep Ollama reachable only inside the VNet (ingress is private)
-  security_rule {
-    name                       = "ollama-vnet-in"
-    priority                   = 120
-    direction                  = "Inbound"
-    access                     = "Allow"
-    protocol                   = "Tcp"
-    source_port_range          = "*"
-    destination_port_range     = "11434"
-    source_address_prefixes    = [var.vnet_cidr]
-    destination_address_prefix = "*"
-  }
 }
 
 resource "azurerm_subnet_network_security_group_association" "subnet_nsg" {
@@ -127,16 +109,6 @@ resource "azurerm_network_interface" "nic" {
   }
 }
 
-# ----------------- Data disk for models (Premium SSD v2) -----------------
-resource "azurerm_managed_disk" "models" {
-  name                 = "${var.prefix}-models-disk"
-  location             = azurerm_resource_group.rg.location
-  resource_group_name  = azurerm_resource_group.rg.name
-  storage_account_type = "Premium_LRS"
-  disk_size_gb         = var.model_disk_size_gb
-  create_option        = "Empty"
-}
-
 # ----------------- VM -----------------
 resource "azurerm_linux_virtual_machine" "vm" {
   name                = "${var.prefix}-vm"
@@ -146,7 +118,6 @@ resource "azurerm_linux_virtual_machine" "vm" {
   admin_username      = var.admin_username
   network_interface_ids = [azurerm_network_interface.nic.id]
 
-  # Ubuntu 22.04 LTS Gen2
   source_image_reference {
     publisher = "Canonical"
     offer     = "0001-com-ubuntu-server-jammy"
@@ -157,7 +128,7 @@ resource "azurerm_linux_virtual_machine" "vm" {
   os_disk {
     name                 = "${var.prefix}-osdisk"
     caching              = "ReadWrite"
-    storage_account_type = "StandardSSD_LRS"
+    storage_account_type = "Standard_LRS"
   }
 
   disable_password_authentication = true
@@ -168,26 +139,6 @@ resource "azurerm_linux_virtual_machine" "vm" {
   }
 
   custom_data = base64encode(file("${path.module}/cloud-init.yaml"))
-}
-
-resource "azurerm_virtual_machine_data_disk_attachment" "attach" {
-  managed_disk_id    = azurerm_managed_disk.models.id
-  virtual_machine_id = azurerm_linux_virtual_machine.vm.id
-  lun                = 0
-  caching            = "ReadOnly"
-}
-
-# NVIDIA GPU driver (Linux) – installs vGPU/CUDA driver on A10
-resource "azurerm_virtual_machine_extension" "nvidia" {
-  name                 = "NvidiaGpuDriverLinux"
-  virtual_machine_id   = azurerm_linux_virtual_machine.vm.id
-  publisher            = "Microsoft.HpcCompute"
-  type                 = "NvidiaGpuDriverLinux"
-  type_handler_version = "1.11"
-  auto_upgrade_minor_version = true
-
-  # Optional: pin a specific driver branch if latest causes CUDA issues on A10s
-  # settings = jsonencode({ driverVersion = "535.161" })
 }
 
 # --------------- Output ---------------
