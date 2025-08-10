@@ -1,4 +1,4 @@
-# Cloud Terraform Templates
+# Multi Cloud Terraform Templates
 
 A collection of simple, reusable Terraform configurations for spinning up VMs and infrastructure across different cloud providers. Perfect for quick testing, development environments, or learning cloud infrastructure.
 
