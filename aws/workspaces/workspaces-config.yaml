@@ -1,0 +1,56 @@
+# AWS WorkSpaces Configuration
+# This file contains configuration values that can override the defaults in main.tf
+
+# Basic configuration
+prefix: "company-workspaces"
+region: "us-west-2"
+
+# Network configuration
+vpc_cidr: "10.70.0.0/16"
+subnet_a_cidr: "10.70.1.0/24"
+subnet_b_cidr: "10.70.2.0/24"
+
+# Directory configuration
+directory_name: "workspaces.local"
+directory_password: "TempPassword123!"  # Change this! Use AWS Secrets Manager in production
+directory_size: "Small"  # Small or Large
+
+# WorkSpaces configuration
+enable_internet_access: true
+default_ou: ""  # Optional: Default organizational unit for WorkSpaces
+
+# Bundle configuration - common bundle IDs:
+# wsb-bh8rsxt14 - Value with Windows 10 (English)
+# wsb-3t36q0xfc - Standard with Windows 10 (English) 
+# wsb-1pzkp0bx4 - Performance with Windows 10 (English)
+# wsb-clj85qzj1 - Power with Windows 10 (English)
+bundle_id: "wsb-bh8rsxt14"  # Value with Windows 10
+
+# User configuration (optional - leave null to skip workspace creation)
+user_name: "testuser"  # Must exist in directory after creation
+
+# WorkSpace properties (optional)
+workspace_properties:
+  compute_type_name: "VALUE"  # VALUE, STANDARD, PERFORMANCE, POWER, GRAPHICS, POWERPRO, GRAPHICSPRO
+  user_volume_size_gib: 10    # Size of user volume in GiB
+  root_volume_size_gib: 80    # Size of root volume in GiB  
+  running_mode: "AUTO_STOP"   # AUTO_STOP or ALWAYS_ON
+  running_mode_auto_stop_timeout_in_minutes: 60
+
+# Setup Instructions:
+# 1. Run terraform apply
+# 2. Create users in the directory:
+#    - Go to AWS Directory Service console
+#    - Select your directory and go to "Users and groups"
+#    - Create the user specified in user_name above
+# 3. Users can connect using:
+#    - WorkSpaces client applications
+#    - Registration code from terraform output
+#    - Username and password set in directory
+
+# Client Downloads:
+# - Windows: https://clients.amazonworkspaces.com/
+# - macOS: App Store or Amazon website
+# - iPad: App Store
+# - Android: Google Play Store
+# - Web: https://clients.amazonworkspaces.com/webclient

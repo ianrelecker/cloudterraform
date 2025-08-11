@@ -1,0 +1,33 @@
+# SES SMTP Configuration
+# This file contains configuration values that can override the defaults in main.tf
+
+# Basic configuration
+prefix: "company-ses-smtp"
+region: "us-west-2"
+
+# Domain configuration
+domain_name: "example.com"
+mail_from_subdomain: "ses"  # Creates mail.example.com as MAIL FROM
+
+# SMTP user configuration
+create_smtp_user: true
+smtp_username: "ses-smtp-user"
+
+# Example usage after apply:
+# SMTP Server: email-smtp.us-west-2.amazonaws.com
+# SMTP Port: 587 (TLS) or 465 (SSL) or 25 (STARTTLS)
+# SMTP Username: [from terraform output smtp_username]
+# SMTP Password: [from terraform output smtp_password - use: terraform output -raw smtp_password]
+
+# DNS Records Required (after terraform apply, check outputs):
+# 1. Domain Verification: 
+#    Type: TXT, Name: _amazonses.example.com, Value: [verification_token from output]
+#
+# 2. DKIM Records (3 CNAME records):
+#    Name: [token1]._domainkey.example.com, Value: [token1].dkim.amazonses.com
+#    Name: [token2]._domainkey.example.com, Value: [token2].dkim.amazonses.com  
+#    Name: [token3]._domainkey.example.com, Value: [token3].dkim.amazonses.com
+#
+# 3. MAIL FROM Domain Records:
+#    Type: MX, Name: mail.example.com, Value: 10 feedback-smtp.us-west-2.amazonses.com
+#    Type: TXT, Name: mail.example.com, Value: v=spf1 include:amazonses.com ~all
