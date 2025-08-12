@@ -1,0 +1,110 @@
+# AI Foundry Configuration
+# This file contains configuration values that can override the defaults in aifoundry.tf
+
+# Basic configuration
+location: "East US"
+environment: "prod"
+project_name: "aifoundry"
+
+# AI Foundry configuration
+ai_foundry:
+  workspace_name: "ai-foundry-workspace"
+  hub_name: "ai-foundry-hub"
+
+# Storage configuration
+storage:
+  account_name: "aifoundrystorage001"  # Must be globally unique
+
+# Security configuration
+security:
+  key_vault_name: "aifoundry-kv-001"  # Must be globally unique
+  allowed_ip_ranges:
+    - "0.0.0.0/0"  # Restrict to your organization's IP ranges in production
+
+# Network configuration
+network:
+  vnet_cidr: "10.100.0.0/16"
+  subnet_cidr: "10.100.1.0/24"
+
+# Model configuration
+models:
+  gpt5:
+    enabled: true
+    deployment_name: "gpt-5-deployment"
+    model_version: "latest"
+    compute_type: "serverless"  # Use Azure OpenAI serverless
+    capacity: 120  # Tokens per minute (TPM) in thousands
+    content_filter: true
+    billing:
+      model: "consumption"  # Pay per token
+      quota_management: true
+  
+  oss120b:
+    enabled: true
+    deployment_name: "oss120b-maas"
+    model_version: "1.0"
+    compute_type: "serverless"  # Use serverless compute
+    scaling_settings:
+      auto_scale: true
+      scale_to_zero: true  # Automatically scale to zero when idle
+      cold_start_enabled: true
+      max_concurrent_requests: 100
+    billing:
+      model: "consumption"  # Pay per request/token
+      idle_cost: 0  # No cost when idle
+
+# Serverless compute configuration - Zero idle costs
+compute:
+  serverless:
+    enabled: true
+    auto_scaling: true
+    billing_model: "pay_per_request"  # Only pay for actual inference time
+    cold_start_optimization: true
+    
+  # Optional development instance (disabled by default)
+  dev_instance:
+    enabled: false  # Set to true only for development
+    vm_size: "Standard_DS3_v2"
+    auto_shutdown:
+      enabled: true
+      idle_time_minutes: 30
+      timezone: "UTC"
+    ssh_access: false
+
+# Monitoring and logging
+monitoring:
+  application_insights:
+    enabled: true
+    retention_days: 30  # Reduced to minimize storage costs
+  
+  logging:
+    level: "INFO"
+    enable_model_metrics: true
+    enable_request_response_logging: false  # Set to true for debugging, false for production
+
+# Cost optimization - Serverless + aggressive cleanup
+cost_optimization:
+  serverless_compute: true  # Primary cost savings
+  auto_pause_compute: true
+  delete_intermediate_data: true
+  storage_lifecycle_policy: true
+  blob_retention_days: 1  # Minimal retention
+  container_retention_days: 1
+  soft_delete_retention_days: 7
+  purge_protection: false
+  auto_shutdown_idle_minutes: 30
+  force_cleanup_on_destroy: true
+  scale_to_zero_when_idle: true  # Serverless benefit
+  pay_per_use_only: true
+
+# MAAS (Model as a Service) specific configuration
+maas:
+  oss120b:
+    endpoint_type: "managed"  # managed or serverless
+    authentication: "key"     # key or aad
+    rate_limits:
+      requests_per_minute: 1000
+      tokens_per_minute: 120000
+    content_safety:
+      enabled: true
+      severity_level: "medium"

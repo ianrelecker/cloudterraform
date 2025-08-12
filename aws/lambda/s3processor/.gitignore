@@ -1,0 +1,44 @@
+# Terraform files
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+.terraform/
+.terraform.lock.hcl
+
+# Lambda zip files (auto-generated)
+*.zip
+
+# Python dependencies (installed via pip)
+src/__pycache__/
+src/*.egg-info/
+src/bin/
+src/boto3*/
+src/botocore*/
+src/dateutil/
+src/jmespath*/
+src/pypdf*/
+src/python_dateutil*/
+src/s3transfer*/
+src/six*
+src/urllib3*/
+
+# Generated web UI
+web-ui/index-ready.html
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build artifacts
+build/
+dist/
+
+# Logs
+*.log
