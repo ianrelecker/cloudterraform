@@ -1,0 +1,30 @@
+# AWS Configuration
+aws_region = "us-east-1"
+environment = "dev"
+
+# S3 Configuration
+s3_bucket_name = "my-kendra-documents-bucket-unique-name"
+
+# Kendra Configuration
+kendra_index_name = "my-document-search-index"
+kendra_edition = "ENTERPRISE_EDITION"  # GenAI Enterprise Edition (recommended, more cost-effective)
+
+# S3 Data Source Configuration
+s3_inclusion_prefixes = [
+  "documents/",
+  "pdfs/",
+  "content/"
+]
+
+s3_exclusion_patterns = [
+  "*.tmp",
+  "*.log",
+  "*.backup",
+  "*/.DS_Store",
+  "*/temp/*"
+]
+
+s3_metadata_prefix = "metadata/"
+
+# Sync schedule (daily at 2 AM UTC)
+sync_schedule = "cron(0 2 * * ? *)"
