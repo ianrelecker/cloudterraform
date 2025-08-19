@@ -4,30 +4,49 @@ A collection of simple, reusable Terraform configurations for spinning up VMs an
 
 ## What's Inside
 
-This repo contains ready-to-use Terraform templates for:
+Ready-to-use Terraform templates organized by provider. Each module has its own README with details and usage.
 
 ### AWS
-- **Linux Single VM** (`aws/linuxsinglevm/`) - Basic Ubuntu server with Docker pre-installed
+- [`aws/linuxsinglevm/`](aws/linuxsinglevm/): Basic Ubuntu server with Docker pre-installed
+- [`aws/kendra/`](aws/kendra/): Kendra index with S3 data source for document search
+- [`aws/lambda/s3processor/`](aws/lambda/s3processor/): Serverless PDF size reducer (S3 + Lambda + API Gateway)
+- [`aws/lambda/s3pdfrepair/`](aws/lambda/s3pdfrepair/): Serverless PDF repair/normalization (S3 + Lambda + API Gateway)
+- [`aws/ses-smtp/`](aws/ses-smtp/): SES SMTP setup for sending email
+- [`aws/workspaces/`](aws/workspaces/): AWS WorkSpaces provisioning
 
-### Azure  
-- **Linux Single VM** (`azure/linuxsinglevm/`) - Basic Ubuntu server setup
-- **Ollama VMs** (`azure/OllamaSingleVM/`) - GPU-enabled VMs for running Ollama AI models
-  - A10 variant for high-performance workloads
-  - T4 variant for cost-effective AI inference
-- **VPN Gateway** (`azure/Networking/vpngatewayv1/`) - Site-to-site VPN setup
+### Azure
+- [`azure/linuxsinglevm/`](azure/linuxsinglevm/): Basic Ubuntu server setup
+- [`azure/OllamaSingleVM/`](azure/OllamaSingleVM/): GPU-enabled VMs for running Ollama AI models
+  - `ollamaT4vm`: Cost-effective inference
+  - `ollamaA10vm`: Balanced performance
+  - `ollamaA100vm`: Highest performance (single GPU)
+  - `ollamaH100vm`: Latest-gen high-performance GPU
+- [`azure/OllamaLBVM/`](azure/OllamaLBVM/): Private load-balanced Ollama via VM Scale Sets
+  - `T4`: Cost-effective GPU VMSS behind an internal load balancer
+  - `H100`: High-performance GPU VMSS behind an internal load balancer
+- [`azure/Networking/vpngatewayv1/`](azure/Networking/vpngatewayv1/): Site-to-site VPN gateway
+- [`azure/cve-processor/`](azure/cve-processor/): Automated CVE ingestion + SOC analysis (Functions + SQL + Web)
+
+## Repo Structure
+
+- `aws/`: AWS-focused modules (compute, serverless, productivity)
+- `azure/`: Azure-focused modules (compute, networking, AI/GPU, app stacks)
+- `LICENSE`: MIT license
+- `README.md`: This overview
 
 ## Quick Start
 
 ### Prerequisites
-- [Terraform](https://www.terraform.io/downloads.html) installed
-- Cloud provider CLI tools configured:
-  - AWS: `aws configure` 
+- Terraform installed
+- Cloud provider CLI tools configured as needed:
+  - AWS: `aws configure`
   - Azure: `az login`
-- Your GitHub username (for SSH key setup)
+- Your GitHub username (for SSH key setup in VM templates)
+- Module-specific tools may be required (e.g., Azure Functions Core Tools for `azure/cve-processor`)
 
 ### For AWS
 
-1. **Set up the backend** (one-time setup):
+1. **Set up the backend** (one-time setup, optional if module overrides):
    ```bash
    # Create S3 bucket for Terraform state
    aws s3api create-bucket --bucket terraform-state-cloudterraform --region us-west-2
@@ -51,7 +70,7 @@ This repo contains ready-to-use Terraform templates for:
 
 ### For Azure
 
-1. **Set up the backend** (one-time setup):
+1. **Set up the backend** (one-time setup, optional if module overrides):
    ```bash
    # Create resource group and storage account
    az group create --name terraform-state-rg --location westus
@@ -75,7 +94,7 @@ This repo contains ready-to-use Terraform templates for:
 ## How It Works
 
 ### SSH Key Management
-All templates automatically fetch your SSH public keys from GitHub (`https://github.com/YOUR_USERNAME.keys`) and configure them for passwordless SSH access. No need to manually manage key pairs!
+VM templates can fetch your SSH public keys from GitHub (`https://github.com/YOUR_USERNAME.keys`) and configure them for passwordless SSH access. No need to manually manage key pairs for these modules.
 
 ### Cloud-init Configuration
 Each VM comes with a `cloud-init.yaml` file that:
@@ -87,11 +106,11 @@ Each VM comes with a `cloud-init.yaml` file that:
 ### Networking
 - **AWS**: Creates a VPC, subnet, internet gateway, and security group
 - **Azure**: Creates a virtual network, subnet, and network security group
-- SSH access is allowed from anywhere by default (customize with `allowed_ssh_cidr`)
+- SSH access is open by default in some templates; restrict via `allowed_ssh_cidr` for non-dev use
 
 ## Customization
 
-Each template supports common variables:
+Many templates support common variables:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
@@ -114,15 +133,23 @@ terraform apply \
 ## Special Configurations
 
 ### Ollama GPU VMs (Azure)
-The Ollama templates create GPU-enabled VMs perfect for running AI models:
-- **A10 variant**: High-performance GPU for demanding workloads
-- **T4 variant**: Cost-effective GPU for inference and lighter workloads
+GPU-enabled VM templates for running Ollama models:
+- T4: Cost-effective GPU for inference and lighter workloads
+- A10: Balanced performance for demanding workloads
+- A100: Highest performance (single GPU) and cost
+- H100: Latest-gen highest performance workloads
 
-Both come pre-configured with GPU drivers and Ollama installation scripts.
+All variants include GPU drivers and Ollama installation scripts.
 
-Default VM sizes are chosen for cost-effectiveness:
-- AWS: `t3.micro` (eligible for free tier)
+Default VM sizes are chosen for cost-effectiveness (override as needed):
+- AWS: `t3.micro` (often free-tier eligible)
 - Azure: `Standard_A1_v2` (low-cost option)
+
+### Ollama LB VM Scale Sets (Azure)
+For scaling Ollama behind a private load balancer within a VNet:
+- Uses a Standard internal Load Balancer on port `11434` for traffic.
+- Deploys a VM Scale Set (VMSS) with GPU instances and attaches a large data disk for models.
+- NSG allows intra-VNet access; expose via VPN, Private Endpoint, or application gateway as needed.
 
 ## Security Notes
 
@@ -148,13 +175,22 @@ Change the `prefix` variable to use unique resource names.
 **Permission errors**  
 Ensure your cloud CLI is configured with appropriate permissions for creating VMs, networks, and storage.
 
+### Module-Specific Notes
+- Some modules (e.g., `aws/lambda/s3processor`, `aws/lambda/s3pdfrepair`) require editing a YAML config file before deployment.
+- VM modules expect a valid `github_username` so your public SSH keys can be fetched automatically.
+
 ## Contributing
 
 Feel free to add new cloud providers or configurations! Follow the existing pattern:
 - Each configuration gets its own directory
-- Include both `main.tf` and `cloud-init.yaml`
+- Include both `main.tf` and `cloud-init.yaml` where applicable
 - Use consistent variable naming
-- Update this README
+- Add a module-specific README and update this one’s “What’s Inside”
+### Serverless PDF Tools (AWS)
+- [`aws/lambda/s3processor`](aws/lambda/s3processor/): Compresses PDFs on S3 upload; includes web UI and download API.
+- [`aws/lambda/s3pdfrepair`](aws/lambda/s3pdfrepair/): Repairs and normalizes PDFs (rebuilds xref/structure); includes web UI and download API.
+
+Note: Both modules read settings from their YAML config files in each directory. Update the `bucket_name` to a globally unique value before `terraform apply`.
 
 ## License
 

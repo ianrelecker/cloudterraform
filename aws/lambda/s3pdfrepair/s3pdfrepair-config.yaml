@@ -1,0 +1,42 @@
+# S3 PDF Repair Configuration
+# This file contains configuration values for the PDF repair Lambda function
+
+# Basic configuration
+prefix: "pdf-repair"
+region: "us-west-2"
+
+# S3 bucket configuration - MUST BE GLOBALLY UNIQUE
+bucket_name: "pdf-repair-processor-relecker"
+upload_folder: "uploads/"
+processed_folder: "processed/"
+cors_allowed_origins: ["*"]
+
+# Web hosting
+host_website: true
+max_file_size_mb: 50
+
+# Lambda configuration
+lambda_function_name: "pdf-repairer"
+lambda_runtime: "python3.11"
+lambda_timeout: 300  # 5 minutes
+lambda_memory: 512   # MB
+
+# PDF processing settings (kept for config parity; not used by repair code)
+compression_quality: 70  # 1-100
+max_width: 1200      # pixels
+max_height: 1600     # pixels
+remove_metadata: true
+optimize_images: true
+
+# API Gateway for download endpoint
+create_api_gateway: true
+api_gateway_name: "pdf-repair-api"
+
+# File cleanup settings
+delete_original_after_processing: false
+delete_processed_after_download: true
+auto_cleanup_hours: 12  # Delete all files after 12 hours
+
+# CloudWatch logging
+log_retention_days: 14
+
