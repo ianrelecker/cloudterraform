@@ -1,0 +1,25 @@
+# Copy to sns-config.yaml and edit values as needed
+
+# Optional prefix used for some names
+prefix: sns
+
+# AWS region for the SNS topic and IAM user
+region: us-west-2
+
+# Name of the SNS topic for Grafana alerts
+topic_name: sns-grafana-alerts
+
+# Phone number to receive SMS (E.164 format)
+# Example: +15551234567
+phone_number: "+1XXXXXXXXXX"
+
+# Create an IAM user with publish-only permissions to this topic (for Grafana)
+create_iam_user: true
+iam_username: grafana-sns-user
+
+# Optional SNS SMS preferences (account-level)
+# default_sms_type: Transactional   # or Promotional
+# monthly_spend_limit: "5"          # USD, as a string
+# default_sender_id: MySvc           # Not supported in all countries (not US)
+# usage_report_s3_bucket: your-sns-sms-usage-bucket
+

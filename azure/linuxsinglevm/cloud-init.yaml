@@ -8,6 +8,9 @@ packages:
   - unzip
   - htop
   - git
+  - net-tools
+  - docker.io
+  - kubectl
   - vim
 
 runcmd:

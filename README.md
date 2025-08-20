@@ -12,6 +12,7 @@ Ready-to-use Terraform templates organized by provider. Each module has its own 
 - [`aws/lambda/s3processor/`](aws/lambda/s3processor/): Serverless PDF size reducer (S3 + Lambda + API Gateway)
 - [`aws/lambda/s3pdfrepair/`](aws/lambda/s3pdfrepair/): Serverless PDF repair/normalization (S3 + Lambda + API Gateway)
 - [`aws/ses-smtp/`](aws/ses-smtp/): SES SMTP setup for sending email
+- [`aws/sns/`](aws/sns/): SNS topic + optional IAM user for Grafana SMS alerts
 - [`aws/workspaces/`](aws/workspaces/): AWS WorkSpaces provisioning
 
 ### Azure
@@ -55,13 +56,13 @@ Ready-to-use Terraform templates organized by provider. Each module has its own 
    aws s3api put-bucket-versioning --bucket terraform-state-cloudterraform --versioning-configuration Status=Enabled
    ```
 
-2. **Deploy a VM**:
-   ```bash
-   cd aws/linuxsinglevm
-   terraform init
-   terraform plan
-   terraform apply
-   ```
+2. **Deploy a VM** (provide your GitHub username):
+  ```bash
+  cd aws/linuxsinglevm
+  terraform init
+  terraform plan
+   terraform apply -var="github_username=<your_github_username>"
+  ```
 
 3. **Connect**:
    ```bash
@@ -78,13 +79,13 @@ Ready-to-use Terraform templates organized by provider. Each module has its own 
    az storage container create --name tfstate --account-name tfstatecloudterraform
    ```
 
-2. **Deploy a VM**:
-   ```bash
-   cd azure/linuxsinglevm
-   terraform init
-   terraform plan 
-   terraform apply
-   ```
+2. **Deploy a VM** (provide your GitHub username):
+  ```bash
+  cd azure/linuxsinglevm
+  terraform init
+  terraform plan 
+   terraform apply -var="github_username=<your_github_username>"
+  ```
 
 3. **Connect**:
    ```bash
@@ -186,11 +187,8 @@ Feel free to add new cloud providers or configurations! Follow the existing patt
 - Include both `main.tf` and `cloud-init.yaml` where applicable
 - Use consistent variable naming
 - Add a module-specific README and update this one’s “What’s Inside”
-### Serverless PDF Tools (AWS)
-- [`aws/lambda/s3processor`](aws/lambda/s3processor/): Compresses PDFs on S3 upload; includes web UI and download API.
-- [`aws/lambda/s3pdfrepair`](aws/lambda/s3pdfrepair/): Repairs and normalizes PDFs (rebuilds xref/structure); includes web UI and download API.
 
-Note: Both modules read settings from their YAML config files in each directory. Update the `bucket_name` to a globally unique value before `terraform apply`.
+Note: Some modules (like the serverless PDF tools) read settings from their YAML config files in each directory. Update values such as `bucket_name` to a globally unique value before `terraform apply`.
 
 ## License
 

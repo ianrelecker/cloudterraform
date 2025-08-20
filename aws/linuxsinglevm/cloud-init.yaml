@@ -9,7 +9,7 @@ packages:
   - htop
   - git
   - vim
-  - docker
+  - docker.io
 
 runcmd:
   - echo "System setup completed" | logger
