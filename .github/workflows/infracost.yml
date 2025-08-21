@@ -12,10 +12,16 @@ permissions:
 
 jobs:
   infracost:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Checkout base branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.ref }}
+          path: base
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -30,6 +36,14 @@ jobs:
           INFRACOST_API_KEY: ${{ secrets.INFRACOST_API_KEY }}
         run: infracost configure set api_key $INFRACOST_API_KEY
 
+      - name: Generate Infracost baseline
+        working-directory: base
+        run: |
+          infracost breakdown \
+            --config-file .infracost/config.yml \
+            --format json \
+            --out-file ../infracost-base.json
+
       - name: Generate Infracost diff
         env:
           # Ensures TF runs non-interactively and avoids backends
@@ -37,6 +51,7 @@ jobs:
         run: |
           infracost diff \
             --config-file .infracost/config.yml \
+            --compare-to infracost-base.json \
             --format json \
             --out-file infracost.json
 
