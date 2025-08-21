@@ -1,0 +1,76 @@
+name: Infracost
+
+on:
+  pull_request:
+    paths:
+      - '**/*.tf'
+      - '.infracost/**'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  infracost:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Checkout base branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.ref }}
+          path: base
+
+      - name: Ensure config exists in base checkout
+        run: |
+          if [ ! -f base/.infracost/config.yml ]; then
+            echo "Base branch missing .infracost/config.yml; copying from PR branch.";
+            mkdir -p base/.infracost;
+            cp .infracost/config.yml base/.infracost/config.yml;
+          fi
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.6
+
+      - name: Setup Infracost
+        uses: infracost/actions/setup@v2
+
+      - name: Configure Infracost API key
+        env:
+          INFRACOST_API_KEY: ${{ secrets.INFRACOST_API_KEY }}
+        run: infracost configure set api_key $INFRACOST_API_KEY
+
+      - name: Generate Infracost baseline
+        working-directory: base
+        run: |
+          infracost breakdown \
+            --config-file .infracost/config.yml \
+            --format json \
+            --out-file ../infracost-base.json
+
+      - name: Generate Infracost diff
+        env:
+          # Ensures TF runs non-interactively and avoids backends
+          TF_IN_AUTOMATION: "true"
+        run: |
+          infracost diff \
+            --config-file .infracost/config.yml \
+            --compare-to infracost-base.json \
+            --format json \
+            --out-file infracost.json
+
+      - name: Post Infracost comment
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          infracost comment github \
+            --path infracost.json \
+            --repo ${{ github.repository }} \
+            --pull-request ${{ github.event.pull_request.number }} \
+            --behavior update \
+            --github-token $GITHUB_TOKEN

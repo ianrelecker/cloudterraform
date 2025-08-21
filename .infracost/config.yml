@@ -1,0 +1,54 @@
+version: 0.1
+projects:
+  # AWS services
+  - path: aws/kendra
+    name: aws/kendra
+    terraform_var_files:
+      - .infracost/vars/aws-kendra.tfvars
+  - path: aws/lambda/s3pdfrepair
+    name: aws/lambda/s3pdfrepair
+  - path: aws/lambda/s3processor
+    name: aws/lambda/s3processor
+  - path: aws/linuxsinglevm
+    name: aws/linuxsinglevm
+  - path: aws/ses-smtp
+    name: aws/ses-smtp
+  - path: aws/sns
+    name: aws/sns
+  - path: aws/workspaces
+    name: aws/workspaces
+
+  # Azure services
+  - path: azure/cve-processor
+    name: azure/cve-processor
+  - path: azure/linuxsinglevm
+    name: azure/linuxsinglevm
+    terraform_var_files:
+      - .infracost/vars/azure-github-username.tfvars
+  - path: azure/Networking/vpngatewayv1
+    name: azure/Networking/vpngatewayv1
+  - path: azure/OllamaLBVM/H100
+    name: azure/OllamaLBVM/H100
+    terraform_var_files:
+      - .infracost/vars/azure-github-username.tfvars
+  - path: azure/OllamaLBVM/T4
+    name: azure/OllamaLBVM/T4
+    terraform_var_files:
+      - .infracost/vars/azure-github-username.tfvars
+  - path: azure/OllamaSingleVM/ollamaA100vm
+    name: azure/OllamaSingleVM/ollamaA100vm
+    terraform_var_files:
+      - .infracost/vars/azure-github-username.tfvars
+  - path: azure/OllamaSingleVM/ollamaA10vm
+    name: azure/OllamaSingleVM/ollamaA10vm
+    terraform_var_files:
+      - .infracost/vars/azure-github-username.tfvars
+  - path: azure/OllamaSingleVM/ollamaH100vm
+    name: azure/OllamaSingleVM/ollamaH100vm
+    terraform_var_files:
+      - .infracost/vars/azure-github-username.tfvars
+  - path: azure/OllamaSingleVM/ollamaT4vm
+    name: azure/OllamaSingleVM/ollamaT4vm
+    terraform_var_files:
+      - .infracost/vars/azure-github-username.tfvars
+
