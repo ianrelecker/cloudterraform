@@ -193,3 +193,25 @@ Note: Some modules (like the serverless PDF tools) read settings from their YAML
 ## License
 
 MIT License - use these templates however you'd like!
+
+## Cost Estimates (Infracost)
+
+This repo includes Infracost to estimate Terraform costs per service locally and in PRs via GitHub Actions.
+
+- Add a repo secret `INFRACOST_API_KEY` containing your Infracost API key.
+- PRs that touch Terraform files trigger a cost diff comment across all services.
+- Locally, estimate costs per service directory with the helper script.
+
+### Local Usage
+
+1) Install Terraform (>= 1.6) and the Infracost CLI.
+2) Authenticate:
+   `infracost configure set api_key <YOUR_KEY>`
+3) Estimate a service:
+   `scripts/infracost_service.sh aws/kendra`
+   Use `--diff` for a branch vs default comparison:
+   `scripts/infracost_service.sh azure/linuxsinglevm --diff`
+
+Notes:
+- Some services need variables. Minimal tfvars live in `.infracost/vars/` and are auto-applied by the script and CI.
+- The tooling initializes Terraform with `-backend=false` to avoid touching remote state backends during cost estimation.

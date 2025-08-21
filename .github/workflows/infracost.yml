@@ -1,0 +1,53 @@
+name: Infracost
+
+on:
+  pull_request:
+    paths:
+      - '**/*.tf'
+      - '.infracost/**'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  infracost:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.6
+
+      - name: Setup Infracost
+        uses: infracost/actions/setup@v2
+
+      - name: Configure Infracost API key
+        env:
+          INFRACOST_API_KEY: ${{ secrets.INFRACOST_API_KEY }}
+        run: infracost configure set api_key $INFRACOST_API_KEY
+
+      - name: Generate Infracost diff
+        env:
+          # Ensures TF runs non-interactively and avoids backends
+          TF_IN_AUTOMATION: "true"
+        run: |
+          infracost diff \
+            --config-file .infracost/config.yml \
+            --terraform-init-flags "-backend=false -input=false" \
+            --format json \
+            --out-file infracost.json
+
+      - name: Post Infracost comment
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          infracost comment github \
+            --path infracost.json \
+            --repo ${{ github.repository }} \
+            --pull-request ${{ github.event.pull_request.number }} \
+            --behavior update
