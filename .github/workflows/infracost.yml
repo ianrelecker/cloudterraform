@@ -72,4 +72,5 @@ jobs:
             --path infracost.json \
             --repo ${{ github.repository }} \
             --pull-request ${{ github.event.pull_request.number }} \
-            --behavior update
+            --behavior update \
+            --github-token $GITHUB_TOKEN
