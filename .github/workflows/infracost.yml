@@ -23,6 +23,14 @@ jobs:
           ref: ${{ github.event.pull_request.base.ref }}
           path: base
 
+      - name: Ensure config exists in base checkout
+        run: |
+          if [ ! -f base/.infracost/config.yml ]; then
+            echo "Base branch missing .infracost/config.yml; copying from PR branch.";
+            mkdir -p base/.infracost;
+            cp .infracost/config.yml base/.infracost/config.yml;
+          fi
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
